@@ -57,6 +57,13 @@ def get_agent():
         _agent = KnowledgeBaseAgent(store=store)
     return _agent
 
+# Pre-warm model & vector store at server startup
+try:
+    print("Pre-warming KnowledgeBaseAgent & EmbeddingStore on server start...")
+    get_agent()
+except Exception as _err:
+    print(f"Pre-warm status: {_err}")
+
 @app.route("/")
 def index():
     return render_template("index.html")
