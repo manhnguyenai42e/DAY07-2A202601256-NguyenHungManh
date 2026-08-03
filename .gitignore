@@ -18,6 +18,7 @@ __pycache__/
 .venv/
 .hf-cache/
 .sentence-transformers/
+.cache/
 Chatbot design for Shopee/
 models/
 src_w_solution/

@@ -2,40 +2,30 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Generator, List, Optional, Union
 from .store import EmbeddingStore
 
-def create_llm_fn(intent: str = "general") -> Callable[[str], str]:
+_LLM_BACKEND_CACHE: Optional[dict] = None
+
+
+def _detect_llm_backend() -> dict:
     """
-    Creates an LLM generation function with fallback chain:
-    1. Gemini (GEMINI_API_KEY) -> models: gemini-3.1-flash, gemini-2.5-flash, gemini-2.0-flash
-    2. DeepSeek (DEEPSEEK_API_KEY) -> models: deepseek-v4-flash, deepseek-chat, deepseek-reasoner
-    3. OpenAI (OPENAI_API_KEY) -> models: o4-mini, gpt-4o-mini
-    4. Offline RAG Synthesizer (Fallback)
+    Xác định provider LLM khả dụng: Gemini -> DeepSeek -> OpenAI -> Offline Synthesizer.
+
+    Việc test kết nối ("Ping") tốn ~4-5s/lần gọi mạng. Trước đây mỗi lần gọi
+    create_llm_fn()/create_stream_llm_fn() đều test lại từ đầu, nghĩa là MỖI câu hỏi
+    của người dùng tốn thêm 1 lượt gọi API dư thừa (ngoài lượt gọi thật). Cache
+    module-level này đảm bảo chỉ test đúng 1 lần cho cả vòng đời tiến trình (dùng
+    chung cho cả answer() và answer_stream()); import lại module (restart app) mới
+    test lại.
     """
+    global _LLM_BACKEND_CACHE
+    if _LLM_BACKEND_CACHE is not None:
+        return _LLM_BACKEND_CACHE
+
     gemini_key = os.getenv("GEMINI_API_KEY")
     deepseek_key = os.getenv("DEEPSEEK_API_KEY")
     openai_key = os.getenv("OPENAI_API_KEY")
-
-    # Intent-based system personas
-    if intent == "seller":
-        system_instruction = (
-            "Bạn là Chuyên viên Pháp chế và Quy định Bán hàng Shopee Việt Nam. "
-            "Giải thích chính xác các quy định đăng bán, hàng cấm/hạn chế, vi phạm và mức xử phạt cho Người bán. "
-            "Trực diện, súc tích, đi thẳng vào câu trả lời. TUYỆT ĐỐI KHÔNG CHÀO HỎI, KHÔNG XƯNG LỜI MỞ ĐẦU."
-        )
-    elif intent == "buyer":
-        system_instruction = (
-            "Bạn là Chuyên viên Quyền lợi Người mua Shopee Việt Nam. "
-            "Giải thích chính xác thời hạn trả hàng hoàn tiền, hình thức thanh toán, bảo mật thông tin. "
-            "Trực diện, súc tích, đi thẳng vào câu trả lời. TUYỆT ĐỐI KHÔNG CHÀO HỎI, KHÔNG XƯNG LỜI MỞ ĐẦU."
-        )
-    else:
-        system_instruction = (
-            "Bạn là Chuyên viên Hỗ trợ Điều khoản và Chính sách Shopee Việt Nam. "
-            "Cung cấp thông tin chính xác, ngắn gọn, cấu trúc rõ ràng. "
-            "Trực diện, súc tích, đi thẳng vào câu trả lời. TUYỆT ĐỐI KHÔNG CHÀO HỎI, KHÔNG XƯNG LỜI MỞ ĐẦU."
-        )
 
     # 1. Try Gemini API first
     if gemini_key:
@@ -44,16 +34,14 @@ def create_llm_fn(intent: str = "general") -> Callable[[str], str]:
             genai.configure(api_key=gemini_key)
             preferred_model = os.getenv("GEMINI_MODEL", "gemini-3.1-flash")
             candidate_models = [preferred_model, "gemini-2.5-flash", "gemini-2.0-flash"]
-            
+
             for m_name in candidate_models:
                 try:
-                    model = genai.GenerativeModel(m_name, system_instruction=system_instruction)
+                    model = genai.GenerativeModel(m_name)
                     res = model.generate_content("Ping")
                     if res and res.text:
-                        def gemini_llm(prompt: str) -> str:
-                            r = model.generate_content(prompt)
-                            return r.text.strip() if (r and r.text) else ""
-                        return gemini_llm
+                        _LLM_BACKEND_CACHE = {"provider": "gemini", "model_name": m_name}
+                        return _LLM_BACKEND_CACHE
                 except Exception:
                     continue
         except Exception as err:
@@ -69,20 +57,14 @@ def create_llm_fn(intent: str = "general") -> Callable[[str], str]:
 
             for ds_m in ds_candidates:
                 try:
-                    def deepseek_llm(prompt: str) -> str:
-                        response = ds_client.chat.completions.create(
-                            model=ds_m,
-                            messages=[
-                                {"role": "system", "content": system_instruction},
-                                {"role": "user", "content": prompt}
-                            ],
-                            temperature=0.3,
-                        )
-                        return response.choices[0].message.content.strip()
-
-                    test_res = deepseek_llm("Ping")
-                    if test_res:
-                        return deepseek_llm
+                    test_res = ds_client.chat.completions.create(
+                        model=ds_m,
+                        messages=[{"role": "user", "content": "Ping"}],
+                        temperature=0.3,
+                    )
+                    if test_res and test_res.choices[0].message.content:
+                        _LLM_BACKEND_CACHE = {"provider": "deepseek", "client": ds_client, "model_name": ds_m}
+                        return _LLM_BACKEND_CACHE
                 except Exception:
                     continue
         except Exception as err:
@@ -98,129 +80,177 @@ def create_llm_fn(intent: str = "general") -> Callable[[str], str]:
 
             for oai_m in oai_candidates:
                 try:
-                    def openai_llm(prompt: str) -> str:
-                        response = oai_client.chat.completions.create(
-                            model=oai_m,
-                            messages=[
-                                {"role": "system", "content": system_instruction},
-                                {"role": "user", "content": prompt}
-                            ],
-                            temperature=0.3,
-                        )
-                        return response.choices[0].message.content.strip()
-
-                    test_res = openai_llm("Ping")
-                    if test_res:
-                        return openai_llm
+                    test_res = oai_client.chat.completions.create(
+                        model=oai_m,
+                        messages=[{"role": "user", "content": "Ping"}],
+                        temperature=0.3,
+                    )
+                    if test_res and test_res.choices[0].message.content:
+                        _LLM_BACKEND_CACHE = {"provider": "openai", "client": oai_client, "model_name": oai_m}
+                        return _LLM_BACKEND_CACHE
                 except Exception:
                     continue
         except Exception as err:
             print(f"Warning: OpenAI API init failed ({err}), falling back to Offline Synthesizer...")
 
-def create_stream_llm_fn(intent: str = "general") -> Callable[[str], Generator[str, None, None]]:
-    """Creates a streaming LLM generator function with fallback chain."""
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    deepseek_key = os.getenv("DEEPSEEK_API_KEY")
-    openai_key = os.getenv("OPENAI_API_KEY")
+    _LLM_BACKEND_CACHE = {"provider": "offline"}
+    return _LLM_BACKEND_CACHE
 
+
+def _persona_system_instruction(intent: str) -> str:
+    """Intent-based system persona text, shared by create_llm_fn() and create_stream_llm_fn()."""
     if intent == "seller":
-        system_instruction = (
+        return (
             "Bạn là Chuyên viên Pháp chế và Quy định Bán hàng Shopee Việt Nam. "
             "Giải thích chính xác các quy định đăng bán, hàng cấm/hạn chế, vi phạm và mức xử phạt cho Người bán. "
             "Trực diện, súc tích, đi thẳng vào câu trả lời. TUYỆT ĐỐI KHÔNG CHÀO HỎI, KHÔNG XƯNG LỜI MỞ ĐẦU."
         )
-    elif intent == "buyer":
-        system_instruction = (
+    if intent == "buyer":
+        return (
             "Bạn là Chuyên viên Quyền lợi Người mua Shopee Việt Nam. "
             "Giải thích chính xác thời hạn trả hàng hoàn tiền, hình thức thanh toán, bảo mật thông tin. "
             "Trực diện, súc tích, đi thẳng vào câu trả lời. TUYỆT ĐỐI KHÔNG CHÀO HỎI, KHÔNG XƯNG LỜI MỞ ĐẦU."
         )
-    else:
-        system_instruction = (
-            "Bạn là Chuyên viên Hỗ trợ Điều khoản và Chính sách Shopee Việt Nam. "
-            "Cung cấp thông tin chính xác, ngắn gọn, cấu trúc rõ ràng. "
-            "Trực diện, súc tích, đi thẳng vào câu trả lời. TUYỆT ĐỐI KHÔNG CHÀO HỎI, KHÔNG XƯNG LỜI MỞ ĐẦU."
-        )
+    return (
+        "Bạn là Chuyên viên Hỗ trợ Điều khoản và Chính sách Shopee Việt Nam. "
+        "Cung cấp thông tin chính xác, ngắn gọn, cấu trúc rõ ràng. "
+        "Trực diện, súc tích, đi thẳng vào câu trả lời. TUYỆT ĐỐI KHÔNG CHÀO HỎI, KHÔNG XƯNG LỜI MỞ ĐẦU."
+    )
 
-    # 1. Try Gemini streaming
-    if gemini_key:
-        try:
-            import google.generativeai as genai
-            genai.configure(api_key=gemini_key)
-            preferred_model = os.getenv("GEMINI_MODEL", "gemini-3.1-flash")
-            candidate_models = [preferred_model, "gemini-2.5-flash", "gemini-2.0-flash"]
-            
-            for m_name in candidate_models:
-                try:
-                    model = genai.GenerativeModel(m_name, system_instruction=system_instruction)
-                    def gemini_stream_llm(prompt: str):
-                        res = model.generate_content(prompt, stream=True)
-                        for chunk in res:
-                            if chunk and chunk.text:
-                                yield chunk.text
-                    return gemini_stream_llm
-                except Exception:
-                    continue
-        except Exception as err:
-            print(f"Warning: Gemini API stream init failed ({err}), trying DeepSeek...")
 
-    # 2. Try DeepSeek streaming
-    if deepseek_key:
-        try:
-            from openai import OpenAI
-            ds_client = OpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com")
-            preferred_ds = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
-            ds_candidates = [preferred_ds, "deepseek-chat"]
-            for ds_m in ds_candidates:
-                try:
-                    def deepseek_stream_llm(prompt: str):
-                        res = ds_client.chat.completions.create(
-                            model=ds_m,
-                            messages=[
-                                {"role": "system", "content": system_instruction},
-                                {"role": "user", "content": prompt}
-                            ],
-                            temperature=0.3,
-                            stream=True
-                        )
-                        for chunk in res:
-                            if chunk.choices and chunk.choices[0].delta.content:
-                                yield chunk.choices[0].delta.content
-                    return deepseek_stream_llm
-                except Exception:
-                    continue
-        except Exception as err:
-            print(f"Warning: DeepSeek API stream init failed ({err})...")
+def create_llm_fn(intent: str = "general") -> Callable[[str], str]:
+    """
+    Creates an LLM generation function using the provider resolved once by
+    _detect_llm_backend() (Gemini -> DeepSeek -> OpenAI -> Offline Synthesizer).
+    Only the persona (system_instruction) varies per call; the connectivity test
+    itself does not repeat.
+    """
+    system_instruction = _persona_system_instruction(intent)
+    backend = _detect_llm_backend()
+    provider = backend["provider"]
 
-    # 3. Try OpenAI streaming
-    if openai_key and not openai_key.startswith("sk-proj-placeholder"):
-        try:
-            from openai import OpenAI
-            oai_client = OpenAI(api_key=openai_key)
-            preferred_oai = os.getenv("OPENAI_MODEL", "o4-mini")
-            oai_candidates = [preferred_oai, "gpt-4o-mini"]
-            for oai_m in oai_candidates:
-                try:
-                    def openai_stream_llm(prompt: str):
-                        res = oai_client.chat.completions.create(
-                            model=oai_m,
-                            messages=[
-                                {"role": "system", "content": system_instruction},
-                                {"role": "user", "content": prompt}
-                            ],
-                            temperature=0.3,
-                            stream=True
-                        )
-                        for chunk in res:
-                            if chunk.choices and chunk.choices[0].delta.content:
-                                yield chunk.choices[0].delta.content
-                    return openai_stream_llm
-                except Exception:
-                    continue
-        except Exception:
-            pass
+    if provider == "gemini":
+        import google.generativeai as genai
+        model = genai.GenerativeModel(backend["model_name"], system_instruction=system_instruction)
 
-    # 4. Offline Fallback Stream
+        def gemini_llm(prompt: str) -> str:
+            try:
+                r = model.generate_content(prompt)
+                return r.text.strip() if (r and r.text) else ""
+            except Exception:
+                return ""
+        return gemini_llm
+
+    if provider == "deepseek":
+        client = backend["client"]
+        model_name = backend["model_name"]
+
+        def deepseek_llm(prompt: str) -> str:
+            try:
+                response = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.3,
+                )
+                return response.choices[0].message.content.strip()
+            except Exception:
+                return ""
+        return deepseek_llm
+
+    if provider == "openai":
+        client = backend["client"]
+        model_name = backend["model_name"]
+
+        def openai_llm(prompt: str) -> str:
+            try:
+                response = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.3,
+                )
+                return response.choices[0].message.content.strip()
+            except Exception:
+                return ""
+        return openai_llm
+
+    def offline_llm(prompt: str) -> str:
+        return prompt
+    return offline_llm
+
+
+def create_stream_llm_fn(intent: str = "general") -> Callable[[str], Generator[str, None, None]]:
+    """
+    Creates a streaming LLM generator function, reusing the SAME cached backend
+    detection as create_llm_fn() (no separate/duplicate connectivity test).
+    """
+    system_instruction = _persona_system_instruction(intent)
+    backend = _detect_llm_backend()
+    provider = backend["provider"]
+
+    if provider == "gemini":
+        import google.generativeai as genai
+        model = genai.GenerativeModel(backend["model_name"], system_instruction=system_instruction)
+
+        def gemini_stream_llm(prompt: str):
+            try:
+                res = model.generate_content(prompt, stream=True)
+                for chunk in res:
+                    if chunk and chunk.text:
+                        yield chunk.text
+            except Exception:
+                return
+        return gemini_stream_llm
+
+    if provider == "deepseek":
+        client = backend["client"]
+        model_name = backend["model_name"]
+
+        def deepseek_stream_llm(prompt: str):
+            try:
+                res = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.3,
+                    stream=True,
+                )
+                for chunk in res:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        yield chunk.choices[0].delta.content
+            except Exception:
+                return
+        return deepseek_stream_llm
+
+    if provider == "openai":
+        client = backend["client"]
+        model_name = backend["model_name"]
+
+        def openai_stream_llm(prompt: str):
+            try:
+                res = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.3,
+                    stream=True,
+                )
+                for chunk in res:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        yield chunk.choices[0].delta.content
+            except Exception:
+                return
+        return openai_stream_llm
+
     def offline_stream_llm(prompt: str):
         fallback_fn = create_llm_fn(intent=intent)
         full_text = fallback_fn(prompt)

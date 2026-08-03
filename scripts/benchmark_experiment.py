@@ -3,6 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
+from main import _select_embedder
 from ingest import load_documents, chunk_document, build_knowledge_base
 from src.chunking import FixedSizeChunker, SentenceChunker, RecursiveChunker, ChunkingStrategyComparator
 from src.store import EmbeddingStore
@@ -50,13 +51,26 @@ BENCHMARK_QUERIES = [
 ]
 
 def run_experiment():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     print("=========================================================")
     print("   RUNNING K4 E-COMMERCE RETRIEVAL BENCHMARK EXPERIMENT  ")
     print("=========================================================\n")
     
     docs = load_documents(DATA_DIR)
     print(f"Loaded {len(docs)} documents from {DATA_DIR}.\n")
-    
+
+    embedder = _select_embedder()
+    backend = getattr(embedder, "_backend_name", embedder.__class__.__name__)
+    print(f"Embedding backend: {backend}")
+    if backend == "mock embeddings fallback":
+        print(
+            "CANH BAO: dang dung MOCK embedder. Diem so ben duoi CHI kiem tra duoc luong chay "
+            "ky thuat, KHONG phan anh chat luong ngu nghia va KHONG duoc dung de ket luan "
+            "chien luoc chunking nao tot hon. Dat EMBEDDING_PROVIDER=local truoc khi chay "
+            "de co so sanh co y nghia.\n"
+        )
+
     # 1. Baseline Comparison
     comparator = ChunkingStrategyComparator()
     print("--- 1. BASELINE CHUNKING STRATEGY COMPARISON ---")
@@ -81,7 +95,7 @@ def run_experiment():
         print(f"\n==========================================")
         print(f"   Strategy: {name}")
         print(f"==========================================")
-        store = build_knowledge_base(DATA_DIR, embedding_fn=_mock_embed, chunker=chunker, collection_name=name)
+        store = build_knowledge_base(DATA_DIR, embedding_fn=embedder, chunker=chunker, collection_name=name)
         print(f"Total chunks in store: {store.get_collection_size()}")
 
         strategy_scores = []
