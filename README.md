@@ -1,3 +1,13 @@
+---
+title: Shopee AI RAG
+emoji: 🛍️
+colorFrom: red
+colorTo: orange
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # K4 — Ngày 7: Nền Tảng Dữ Liệu, Embedding & Vector Store
 
 > Bản K4 của Lab 07. Hướng dẫn Codelabs được phát riêng trên lớp/LMS (không kèm trong repo); yêu cầu Giai đoạn 2 riêng xem [K4_VARIANT.md](K4_VARIANT.md).
