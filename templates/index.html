@@ -481,6 +481,26 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
 
+    .chat-msg.bot p {
+      margin: 0 0 8px 0;
+      line-height: 1.6;
+    }
+    .chat-msg.bot p:last-child {
+      margin-bottom: 0;
+    }
+    .chat-msg.bot ul, .chat-msg.bot ol {
+      margin: 6px 0 10px 0;
+      padding-left: 20px;
+    }
+    .chat-msg.bot li {
+      margin-bottom: 6px;
+      line-height: 1.55;
+    }
+    .chat-msg.bot strong, .chat-msg.bot b {
+      color: #111827;
+      font-weight: 700;
+    }
+
     /* Source Citation Badges inside bot message */
     .source-box {
       margin-top: 10px;
@@ -790,20 +810,47 @@
         const data = await res.json();
         removeMessage(loaderId);
 
-        let botHtml = marked.parse(data.answer);
+        let sourcesHtml = "";
         if (data.sources && data.sources.length > 0) {
-          botHtml += `<div class="source-box"><strong>📌 Tài liệu liên quan:</strong><br>`;
+          sourcesHtml += `<div class="source-box"><strong>📌 Tài liệu liên quan:</strong><br>`;
           data.sources.forEach(s => {
-            botHtml += `<span class="source-tag">${s.title} (Role: ${s.customer_role} • Score: ${s.score})</span> `;
+            sourcesHtml += `<span class="source-tag">${s.title} (Role: ${s.customer_role} • Score: ${s.score})</span> `;
           });
-          botHtml += `</div>`;
+          sourcesHtml += `</div>`;
         }
 
-        appendMessage(botHtml, 'bot', true);
+        const botMsgDiv = appendMessage("", 'bot', true);
+        typeBotResponse(botMsgDiv, data.answer, sourcesHtml);
       } catch (err) {
         removeMessage(loaderId);
         appendMessage("Xin lỗi, đã xảy ra lỗi kết nối với RAG server.", 'bot');
       }
+    }
+
+    function typeBotResponse(containerElement, rawMarkdown, sourcesHtml) {
+      const cleanMarkdown = (rawMarkdown || "").replace(/^[ \t]*[•·][ \t]*/gm, '- ');
+      const words = cleanMarkdown.split(/(\s+)/);
+      let index = 0;
+      let currentText = "";
+
+      const timer = setInterval(() => {
+        if (index >= words.length) {
+          clearInterval(timer);
+          containerElement.innerHTML = marked.parse(cleanMarkdown) + (sourcesHtml || '');
+          const scrollArea = document.getElementById('chatMessages');
+          if (scrollArea) scrollArea.scrollTop = scrollArea.scrollHeight;
+          return;
+        }
+
+        currentText += words[index];
+        index++;
+
+        const currentClean = currentText.replace(/^[ \t]*[•·][ \t]*/gm, '- ');
+        containerElement.innerHTML = marked.parse(currentClean);
+
+        const scrollArea = document.getElementById('chatMessages');
+        if (scrollArea) scrollArea.scrollTop = scrollArea.scrollHeight;
+      }, 20);
     }
 
     function appendMessage(text, sender, isHtml = false) {
@@ -817,6 +864,7 @@
       }
       chatMessages.appendChild(msgDiv);
       chatMessages.scrollTop = chatMessages.scrollHeight;
+      return msgDiv;
     }
 
     function appendTypingIndicator() {

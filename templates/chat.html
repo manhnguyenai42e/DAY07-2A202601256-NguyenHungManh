@@ -397,6 +397,26 @@
       border-bottom-left-radius: 4px;
     }
 
+    .chat-bubble p {
+      margin: 0 0 8px 0;
+      line-height: 1.6;
+    }
+    .chat-bubble p:last-child {
+      margin-bottom: 0;
+    }
+    .chat-bubble ul, .chat-bubble ol {
+      margin: 6px 0 10px 0;
+      padding-left: 20px;
+    }
+    .chat-bubble li {
+      margin-bottom: 6px;
+      line-height: 1.55;
+    }
+    .chat-bubble strong, .chat-bubble b {
+      color: #111827;
+      font-weight: 700;
+    }
+
     .source-box {
       margin-top: 10px;
       padding-top: 8px;
@@ -694,21 +714,48 @@
         const data = await res.json();
         removeLoader(loaderId);
 
-        let botHtml = marked.parse(data.answer);
+        let sourcesHtml = "";
         if (data.sources && data.sources.length > 0) {
-          botHtml += `<div class="source-box"><strong>📌 Tài liệu liên quan:</strong><br>`;
+          sourcesHtml += `<div class="source-box"><strong>📌 Tài liệu liên quan:</strong><br>`;
           data.sources.forEach(s => {
-            botHtml += `<span class="source-tag">${s.title} (Score: ${s.score})</span> `;
+            sourcesHtml += `<span class="source-tag">${s.title} (Score: ${s.score})</span> `;
           });
-          botHtml += `</div>`;
+          sourcesHtml += `</div>`;
         }
 
-        appendMsg(botHtml, 'bot', true);
+        const bubbleEl = appendMsg("", 'bot', true);
+        typeBotResponse(bubbleEl, data.answer, sourcesHtml);
 
       } catch (err) {
         removeLoader(loaderId);
         appendMsg("Xin lỗi, đã xảy ra lỗi kết nối với RAG server.", 'bot');
       }
+    }
+
+    function typeBotResponse(containerElement, rawMarkdown, sourcesHtml) {
+      const cleanMarkdown = (rawMarkdown || "").replace(/^[ \t]*[•·][ \t]*/gm, '- ');
+      const words = cleanMarkdown.split(/(\s+)/);
+      let index = 0;
+      let currentText = "";
+
+      const timer = setInterval(() => {
+        if (index >= words.length) {
+          clearInterval(timer);
+          containerElement.innerHTML = marked.parse(cleanMarkdown) + (sourcesHtml || '');
+          const contentArea = document.getElementById('contentArea');
+          if (contentArea) contentArea.scrollTop = contentArea.scrollHeight;
+          return;
+        }
+
+        currentText += words[index];
+        index++;
+
+        const currentClean = currentText.replace(/^[ \t]*[•·][ \t]*/gm, '- ');
+        containerElement.innerHTML = marked.parse(currentClean);
+
+        const contentArea = document.getElementById('contentArea');
+        if (contentArea) contentArea.scrollTop = contentArea.scrollHeight;
+      }, 20);
     }
 
     function appendMsg(content, sender, isHtml = false) {
@@ -729,6 +776,7 @@
 
       const contentArea = document.getElementById('contentArea');
       contentArea.scrollTop = contentArea.scrollHeight;
+      return bubble;
     }
 
     function appendLoader() {

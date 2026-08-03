@@ -226,7 +226,7 @@ class KnowledgeBaseAgent:
             f"1. TUYỆT ĐỐI KHÔNG CHÀO HỎI, KHÔNG LỜI MỞ ĐẦU (KHÔNG dùng 'Dạ chào bạn', 'Xin chào', 'Cảm ơn bạn').\n"
             f"2. Đi thẳng trực tiếp vào câu trả lời, trả lời đúng trọng tâm vấn đề.\n"
             f"3. Nêu rõ các quy định, con số cụ thể (mốc thời gian 15 ngày, 24h, % phí, quy định xử phạt).\n"
-            f"4. Trình bày dạng danh sách gạch đầu dòng rõ ràng, đậm từ khóa chính.\n"
+            f"4. Trình bày dạng danh sách gạch đầu dòng Markdown chuẩn (dùng dấu gạch ngang '-' ở đầu mỗi dòng), in đậm từ khóa chính.\n"
             f"5. Không xưng 'Tôi là AI', không máy móc."
         )
 
@@ -243,7 +243,7 @@ class KnowledgeBaseAgent:
             answer = f"**{top_title}**:\n\n"
             for line in lines:
                 if len(line) > 10:
-                    answer += f"• {line}\n"
+                    answer += f"- {line}\n"
         else:
             answer = llm_response
 

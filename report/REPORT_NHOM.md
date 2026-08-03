@@ -1,7 +1,7 @@
 # Báo Cáo Nhóm — Lab 7: Embedding & Vector Store
 
 **Nhóm:** Nhóm K4 - E-Commerce Policy Experts  
-**Thành viên:** Nguyễn Văn A, Trần Thị B, Lê Văn C  
+**Thành viên:** Nguyễn Minh Đạt, Nguyễn Hương Trà, Nguyễn Thị Mai Anh, Nguyễn Hùng Mạnh  
 **Ngày:** 03/08/2026  
 
 > **Nộp 1 bản / nhóm.** Phần cá nhân (hướng tiếp cận, kết quả riêng, dự đoán…) mỗi thành viên nộp riêng trong `REPORT_CANHAN.md`. Chi tiết thang điểm: `docs/SCORING.md`.
@@ -48,13 +48,21 @@
 
 ### Phân tích đường cơ sở (Baseline Analysis)
 
-Chạy `ChunkingStrategyComparator().compare()` trên các tài liệu:
+Chạy `ChunkingStrategyComparator().compare(text, chunk_size=300)` trên 3 tài liệu (số liệu thật, tái lập được từ code):
 
 | Tài liệu | Chiến lược (Strategy) | Số lượng Chunk | Độ dài trung bình | Giữ được ngữ cảnh không? |
 |-----------|----------|-------------|------------|-------------------|
-| `k4-returns-policy` | FixedSizeChunker (`fixed_size`) | 66 | 300.0 | Trung bình (bị ngắt giữa đoạn văn) |
-| `k4-returns-policy` | SentenceChunker (`by_sentences`) | 48 | 398.5 | Tốt (giữ nguyên ranh giới câu) |
-| `k4-returns-policy` | RecursiveChunker (`recursive`) | 40 | 485.2 | Rất tốt (giữ trọn vẹn mục/điều khoản) |
+| `k4-returns-policy` | FixedSizeChunker (`fixed_size`) | 66 | 298.2 | Trung bình (bị ngắt giữa đoạn văn) |
+| `k4-returns-policy` | SentenceChunker (`by_sentences`) | 47 | 415.7 | Tốt (giữ nguyên ranh giới câu) |
+| `k4-returns-policy` | RecursiveChunker (`recursive`) | 101 | 192.7 | Tốt (ưu tiên ngắt ở `\n\n`/`\n`, nhưng ở `chunk_size=300` vẫn phải cắt vào dấu `. `/khoảng trắng khá thường xuyên) |
+| `k4-seller-listing` | FixedSizeChunker (`fixed_size`) | 73 | 297.0 | Trung bình (bị ngắt giữa đoạn văn) |
+| `k4-seller-listing` | SentenceChunker (`by_sentences`) | 78 | 274.6 | Tốt (giữ nguyên ranh giới câu) |
+| `k4-seller-listing` | RecursiveChunker (`recursive`) | 104 | 206.3 | Tốt (giữ được các mục a/b/c liền mạch hơn fixed-size) |
+| `k4-payment-policy` | FixedSizeChunker (`fixed_size`) | 61 | 295.3 | Trung bình (bị ngắt giữa đoạn văn) |
+| `k4-payment-policy` | SentenceChunker (`by_sentences`) | 47 | 380.0 | Tốt (giữ nguyên ranh giới câu) |
+| `k4-payment-policy` | RecursiveChunker (`recursive`) | 100 | 177.8 | Tốt (giữ cấu trúc điều khoản, nhưng chunk ngắn hơn 2 chiến lược còn lại ở `chunk_size=300`) |
+
+> **Lưu ý:** `ChunkingStrategyComparator.compare()` dùng cùng `chunk_size` cho `FixedSizeChunker` (overlap=0) và `RecursiveChunker`. Ở `chunk_size=300`, `RecursiveChunker` tạo **nhiều chunk hơn và ngắn hơn** `FixedSizeChunker` trên cả 3 tài liệu — vì văn bản chính sách có rất nhiều đoạn ngắn (mục a/b/c, điều khoản con) nên bộ tách `["\n\n","\n",". "," ",""]` dừng sớm ở các đoạn đó thay vì gộp đủ 300 ký tự. Đây là lý do nhóm chọn `chunk_size=500–600` (xem chiến lược của Nguyễn Hương Trà bên dưới) thay vì dùng mặc định `300` khi triển khai thực tế.
 
 ### Chiến lược của từng thành viên
 
@@ -121,7 +129,7 @@ chunker = FixedSizeChunker(chunk_size=300, overlap=50)
 | 1 | Thời hạn gửi yêu cầu trả hàng và hoàn tiền trên Shopee là bao lâu? | Người Mua có thể gửi yêu cầu trả hàng/hoàn tiền trong vòng 15 ngày kể từ lúc đơn hàng được cập nhật giao hàng thành công (riêng thực phẩm tươi sống/đông lạnh là 24 giờ). | `k4-returns-policy::chunk_3` |
 | 2 | Người bán bị xử lý thế nào khi vi phạm quy định đăng bán sản phẩm bị cấm? | Người Bán bị xóa sản phẩm vi phạm, khoá/tạm khóa tài khoản Người Bán, tước danh hiệu Shop Yêu Thích và có thể bị báo cáo lên cơ quan nhà nước có thẩm quyền. | `k4-seller-listing::chunk_1` (Filter: `customer_role=seller`) |
 | 3 | Quy định về thời gian phản hồi của Người Bán khi nhận yêu cầu trả hàng là bao lâu? | Người Bán cần gửi phản hồi trong vòng 02 ngày lịch kể từ ngày nhận được thông báo của Shopee nếu không đồng ý với quyết định hoàn tiền. | `k4-returns-policy::chunk_8` |
-| 4 | Điều kiện để Người Mua nhận hoàn tiền khi thanh toán đơn hàng bằng COD là gì? | Tài khoản Shopee của Người Mua phải liên kết thành công với phương thức nhận hoàn tiền hợp lệ (Ví ShopeePay hoặc Tài khoản ngân hàng). | `k4-payment-policy::chunk_4` |
+| 4 | Điều kiện để Người Mua nhận hoàn tiền khi thanh toán đơn hàng bằng COD là gì? | Tài khoản Shopee của Người Mua phải liên kết thành công với phương thức nhận hoàn tiền hợp lệ (Ví ShopeePay hoặc Tài khoản ngân hàng). | `k4-returns-policy` — Mục 3.3 (đã xác minh: nội dung COD/liên kết hoàn tiền nằm trong Chính sách Trả hàng &amp; Hoàn tiền, **không** nằm trong `k4-payment-policy` — tài liệu này chỉ nói về điều khoản SPayLater, không chứa từ "COD") |
 | 5 | Người dùng có quyền yêu cầu xóa hoặc rút lại sự đồng ý sử dụng dữ liệu cá nhân không? | Người dùng có quyền gửi yêu cầu rút lại sự đồng ý hoặc yêu cầu xóa dữ liệu cá nhân bằng cách liên hệ Nhân viên bảo vệ dữ liệu cá nhân của Shopee. | `k4-privacy-policy::chunk_12` |
 
 ### Tổng hợp chất lượng truy xuất của nhóm
@@ -140,6 +148,28 @@ chunker = FixedSizeChunker(chunk_size=300, overlap=50)
 ---
 
 ## 4. Thuyết trình (Demo) & Bài học nhóm — Nhóm (5 điểm)
+
+### Phân Tích Lỗi (Failure Analysis) — Bài tập 3.5
+
+**Trường hợp thất bại phát hiện được:** Câu hỏi *"Chính sách bảo mật của Shopee bảo vệ dữ liệu người dùng như thế nào?"* (biến thể gần với chủ đề Câu hỏi #5 trong bộ benchmark) khi đi qua `KnowledgeBaseAgent.answer()` (tầng agent triển khai cho chatbot, không phải gọi thẳng `EmbeddingStore.search()`).
+
+**So sánh có/không filter (đúng theo `docs/EVALUATION.md` — mục 3. Metadata Utility, yêu cầu "So sánh top-3 kết quả giữa `search()` và `search_with_filter()` trên cùng câu hỏi"):**
+
+| Cách gọi | Top-1 trả về | `customer_role` | Score |
+|---|---|---|---|
+| `store.search()` — không filter (ground truth) | `k4-privacy-policy` | `both` | **0.83** |
+| `agent.answer()` — có auto-filter role | `k4-returns-policy` | `buyer` | 0.69 |
+
+**Tại sao thất bại?**
+1. `KnowledgeBaseAgent._classify_intent()` ([src/agent.py:151](../src/agent.py#L151)) dùng danh sách từ khóa để tự đoán vai trò người hỏi. Từ "bảo mật" nằm trong `buyer_keywords`, nên câu hỏi trên bị tự động gán `intent="buyer"` dù người dùng không hề chọn role.
+2. Agent sau đó tự áp `metadata_filter={"customer_role": "buyer"}` ([src/agent.py:180](../src/agent.py#L180)) — loại bỏ toàn bộ tài liệu gắn `customer_role: both` ra khỏi candidate pool, vì `search_with_filter()` ([src/store.py:137](../src/store.py#L137)) so khớp tuyệt đối (`meta.get(k) == v`): `"both" != "buyer"`.
+3. Hệ quả: `k4-privacy-policy` (đúng nhất, score 0.83) và `k4-payment-policy` — cả 2 tài liệu gắn `both` (chiếm 40% corpus) — **biến mất hoàn toàn** bất cứ khi nào có filter buyer/seller được áp, dù nội dung của chúng liên quan đến cả hai vai trò.
+4. Cơ chế fallback (`if not results: search không filter`) không cứu được vì filter vẫn trả về vài kết quả (chỉ là sai tài liệu), không rỗng.
+
+**Đề xuất cải thiện:**
+- Sửa `search_with_filter()` để coi `customer_role: both` tương thích với cả filter `buyer` và `seller` (không chỉ so khớp tuyệt đối).
+- Thu hẹp `seller_keywords`/`buyer_keywords` trong `_classify_intent()`, bỏ các từ khóa chung chung dễ gây nhiễu (`"bảo mật"`, `"người bán"` xuất hiện cả trong văn bản không dành riêng một vai trò).
+- Chỉ tự áp metadata filter khi độ tin cậy phân loại đủ cao, hoặc để người dùng chủ động chọn role thay vì suy đoán từ từ khóa đơn lẻ.
 
 **Những phân tích (insights) hay nhất nhóm sẽ trình bày:**
 1. **Tác động của Metadata Pre-filtering:** Tiền lọc theo `customer_role` và `category` giúp tăng độ chính xác tìm kiếm lên đáng kể, giải quyết triệt để vấn đề nhiễu ngữ nghĩa giữa các chính sách trùng từ khóa (ví dụ từ "người bán" xuất hiện ở cả chính sách người mua và chính sách người bán).
