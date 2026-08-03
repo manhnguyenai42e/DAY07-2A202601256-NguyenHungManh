@@ -16,4 +16,8 @@ __pycache__/
 .idea/
 .omx/
 .venv/
+.hf-cache/
+.sentence-transformers/
+Chatbot design for Shopee/
 src_w_solution/
+.vercel

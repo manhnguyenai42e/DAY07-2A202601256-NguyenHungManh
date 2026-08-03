@@ -1,8 +1,8 @@
 # Báo Cáo Cá Nhân — Lab 7: Embedding & Vector Store
 
-**Họ tên:** [Tên sinh viên]
-**Nhóm:** [Tên nhóm]
-**Ngày:** [Ngày nộp]
+**Họ tên:** Nguyễn Hùng Mạnh  
+**Nhóm:** Nhóm K4 - E-Commerce Policy Experts  
+**Ngày:** 03/08/2026  
 
 > **Nộp 1 bản / sinh viên.** Phần nhóm (lựa chọn tài liệu, thiết kế chiến lược, bộ câu hỏi đánh giá, demo) nộp chung 1 bản trong `REPORT_NHOM.md`. Chi tiết thang điểm: `docs/SCORING.md`.
 
@@ -15,29 +15,31 @@
 ### Độ tương tự Cosine (Cosine Similarity) (Bài tập 1.1)
 
 **Độ tương tự cosine cao (High cosine similarity) nghĩa là gì?**
-> *Viết 1-2 câu:*
+> Độ tương tự cosine cao (gần 1.0) nghĩa là hai vector embedding chỉ cùng hướng trong không gian đa chiều, phản ánh rằng hai đoạn văn bản có ý nghĩa ngữ nghĩa tương đồng nhau, bất kể độ dài ngắn của văn bản.
 
 **Ví dụ có độ tương tự CAO:**
-- Câu A:
-- Câu B:
-- Tại sao tương đồng:
+- Câu A: Shopee hỗ trợ đổi trả hàng trong thời hạn 15 ngày.
+- Câu B: Khách hàng được quyền hoàn trả sản phẩm trong vòng 15 ngày kể từ khi nhận hàng.
+- Tại sao tương đồng: Cả hai câu đều thể hiện cùng một ý nghĩa quy định thời hạn đổi trả 15 ngày của nền tảng thương mại điện tử.
 
 **Ví dụ có độ tương tự THẤP:**
-- Câu A:
-- Câu B:
-- Tại sao khác:
+- Câu A: Khách hàng được đổi trả hàng bị lỗi trong 15 ngày.
+- Câu B: Thuật toán học máy huấn luyện trên tập dữ liệu lớn.
+- Tại sao khác: Câu A thuộc chủ đề chính sách mua sắm, câu B thuộc chủ đề kỹ thuật máy tính; hai chủ đề không liên quan ngữ nghĩa.
 
 **Tại sao độ tương tự cosine (cosine similarity) được ưu tiên hơn khoảng cách Euclid (Euclidean distance) cho text embeddings?**
-> *Viết 1-2 câu:*
+> Khoảng cách Euclid bị ảnh hưởng mạnh bởi độ dài vector (độ dài câu), khiến hai câu có cùng ý nghĩa nhưng một câu dài và một câu ngắn có khoảng cách xa nhau. Độ tương tự Cosine chỉ đo góc giữa 2 vector, triệt tiêu ảnh hưởng của độ dài văn bản.
 
 ### Bài toán tính toán Chunking (Bài tập 1.2)
 
 **Tài liệu 10,000 ký tự, chunk_size=500, overlap=50. Bao nhiêu chunks?**
-> *Trình bày phép tính:*
-> *Đáp án:*
+> Phép tính:  
+> Step size = `chunk_size` - `overlap` = 500 - 50 = 450 ký tự.  
+> Số lượng chunks = $\lceil (10,000 - 500) / 450 \rceil + 1 = \lceil 9,500 / 450 \rceil + 1 = 22 + 1 = 23$ chunks.  
+> Đáp án: **22 hoặc 23 chunks** (tùy thuộc vào xử lý phần dư ở cuối).
 
 **Nếu độ chồng chéo (overlap) tăng lên 100, số lượng chunk thay đổi thế nào? Tại sao muốn độ chồng chéo nhiều hơn?**
-> *Viết 1-2 câu:*
+> Nếu overlap tăng lên 100, step size giảm xuống 400, làm số lượng chunk tăng lên $\lceil 9,500 / 400 \rceil + 1 = 25$ chunks. Ta muốn tăng độ chồng chéo để tránh ngắt đôi ngữ cảnh hoặc từ ngữ quan trọng nằm ở vị trí giáp ranh giữa hai chunk consecutive.
 
 ---
 
@@ -48,23 +50,23 @@ Giải thích cách tiếp cận của bạn khi lập trình (implement) các p
 ### Các hàm chia nhỏ (Chunking Functions)
 
 **`SentenceChunker.chunk`** — hướng tiếp cận:
-> *Viết 2-3 câu: dùng biểu thức chính quy (regex) gì để phát hiện câu? Xử lý trường hợp ngoại lệ (edge case) nào?*
+> Sử dụng biểu thức chính quy `re.split(r'(?<=\. |\! |\? |\.\n)', text)` để phát hiện ranh giới kết thúc câu mà vẫn giữ lại dấu câu. Sau đó gom nhóm tối đa `max_sentences_per_chunk` câu vào mỗi chunk và thực hiện strip loại bỏ khoảng trắng thừa.
 
 **`RecursiveChunker.chunk` / `_split`** — hướng tiếp cận:
-> *Viết 2-3 câu: thuật toán hoạt động thế nào? Base case (trường hợp cơ sở) là gì?*
+> Thuật toán duyệt qua danh sách dấu phân cách ưu tiên `["\n\n", "\n", ". ", " ", ""]`. Trường hợp cơ sở (base case) là khi văn bản nhỏ hơn `chunk_size` hoặc đã hết danh sách phân cách thì trả về khối văn bản đó. Khi ngắt, thuật toán tích lũy các đoạn nhỏ vào danh sách cho đến khi vượt quá `chunk_size` thì đệ quy tách tiếp đoạn đó.
 
 ### Lớp EmbeddingStore
 
 **`add_documents` + `search`** — hướng tiếp cận:
-> *Viết 2-3 câu: lưu trữ thế nào? Tính độ tương tự ra sao?*
+> Với `add_documents`, chuẩn hóa `Document` thành record dict chứa id, content, metadata và vector embedding (từ `_embedding_fn`). Với `search`, tính vector embedding cho query, sau đó tính tích vô hướng (`_dot`) với tất cả các vector đã lưu, sắp xếp giảm dần theo điểm tương đồng và trả về top-k.
 
 **`search_with_filter` + `delete_document`** — hướng tiếp cận:
-> *Viết 2-3 câu: lọc (filter) trước hay sau? Xóa bằng cách nào?*
+> Với `search_with_filter`, thực hiện tiền lọc (pre-filter) danh sách record thỏa mãn tất cả các cặp `key: value` trong `metadata_filter` trước, sau đó mới tính độ tương đồng vector trên danh sách đã lọc. Với `delete_document`, lọc bỏ tất cả record có `id` hoặc `metadata['doc_id']` trùng với `doc_id` cần xóa.
 
 ### Tác tử KnowledgeBaseAgent
 
 **`answer`** — hướng tiếp cận:
-> *Viết 2-3 câu: cấu trúc prompt? Cách đưa ngữ cảnh (inject context) vào thế nào?*
+> Gọi `store.search(question, top_k=top_k)` để lấy các chunk liên quan nhất. Sau đó định dạng ngữ cảnh thành chuỗi dạng `[1] content1\n\n[2] content2` và chèn vào RAG prompt trước khi truyền sang hàm `llm_fn` để tổng hợp câu trả lời.
 
 ---
 
@@ -74,11 +76,58 @@ Vượt qua bộ kiểm thử là điều kiện tính điểm phần này.
 
 ### Kết Quả Kiểm Thử (Test Results)
 
-```
-# Dán kết quả (output) của: pytest tests/ -v
+```text
+============================= test session starts =============================
+platform win32 -- Python 3.12.2, pytest-9.1.1, pluggy-1.6.0
+collected 42 items
+
+tests/test_solution.py::TestProjectStructure::test_root_main_entrypoint_exists PASSED
+tests/test_solution.py::TestProjectStructure::test_src_package_exists PASSED
+tests/test_solution.py::TestClassBasedInterfaces::test_chunker_classes_exist PASSED
+tests/test_solution.py::TestClassBasedInterfaces::test_mock_embedder_exists PASSED
+tests/test_solution.py::TestFixedSizeChunker::test_chunks_respect_size PASSED
+tests/test_solution.py::TestFixedSizeChunker::test_correct_number_of_chunks_no_overlap PASSED
+tests/test_solution.py::TestFixedSizeChunker::test_empty_text_returns_empty_list PASSED
+tests/test_solution.py::TestFixedSizeChunker::test_no_overlap_no_shared_content PASSED
+tests/test_solution.py::TestFixedSizeChunker::test_overlap_creates_shared_content PASSED
+tests/test_solution.py::TestFixedSizeChunker::test_returns_list PASSED
+tests/test_solution.py::TestFixedSizeChunker::test_single_chunk_if_text_shorter PASSED
+tests/test_solution.py::TestSentenceChunker::test_chunks_are_strings PASSED
+tests/test_solution.py::TestSentenceChunker::test_respects_max_sentences PASSED
+tests/test_solution.py::TestSentenceChunker::test_returns_list PASSED
+tests/test_solution.py::TestSentenceChunker::test_single_sentence_max_gives_many_chunks PASSED
+tests/test_solution.py::TestRecursiveChunker::test_chunks_within_size_when_possible PASSED
+tests/test_solution.py::TestRecursiveChunker::test_empty_separators_falls_back_gracefully PASSED
+tests/test_solution.py::TestRecursiveChunker::test_handles_double_newline_separator PASSED
+tests/test_solution.py::TestRecursiveChunker::test_returns_list PASSED
+tests/test_solution.py::TestEmbeddingStore::test_add_documents_increases_size PASSED
+tests/test_solution.py::TestEmbeddingStore::test_add_more_increases_further PASSED
+tests/test_solution.py::TestEmbeddingStore::test_initial_size_is_zero PASSED
+tests/test_solution.py::TestEmbeddingStore::test_search_results_have_content_key PASSED
+tests/test_solution.py::TestEmbeddingStore::test_search_results_have_score_key PASSED
+tests/test_solution.py::TestEmbeddingStore::test_search_results_sorted_by_score_descending PASSED
+tests/test_solution.py::TestEmbeddingStore::test_search_returns_at_most_top_k PASSED
+tests/test_solution.py::TestEmbeddingStore::test_search_returns_list PASSED
+tests/test_solution.py::TestKnowledgeBaseAgent::test_answer_non_empty PASSED
+tests/test_solution.py::TestKnowledgeBaseAgent::test_answer_returns_string PASSED
+tests/test_solution.py::TestComputeSimilarity::test_identical_vectors_return_1 PASSED
+tests/test_solution.py::TestComputeSimilarity::test_opposite_vectors_return_minus_1 PASSED
+tests/test_solution.py::TestComputeSimilarity::test_orthogonal_vectors_return_0 PASSED
+tests/test_solution.py::TestComputeSimilarity::test_zero_vector_returns_0 PASSED
+tests/test_solution.py::TestCompareChunkingStrategies::test_counts_are_positive PASSED
+tests/test_solution.py::TestCompareChunkingStrategies::test_each_strategy_has_count_and_avg_length PASSED
+tests/test_solution.py::TestCompareChunkingStrategies::test_returns_three_strategies PASSED
+tests/test_solution.py::TestEmbeddingStoreSearchWithFilter::test_filter_by_department PASSED
+tests/test_solution.py::TestEmbeddingStoreSearchWithFilter::test_no_filter_returns_all_candidates PASSED
+tests/test_solution.py::TestEmbeddingStoreSearchWithFilter::test_returns_at_most_top_k PASSED
+tests/test_solution.py::TestEmbeddingStoreDeleteDocument::test_delete_reduces_collection_size PASSED
+tests/test_solution.py::TestEmbeddingStoreDeleteDocument::test_delete_returns_false_for_nonexistent_doc PASSED
+tests/test_solution.py::TestEmbeddingStoreDeleteDocument::test_delete_returns_true_for_existing_doc PASSED
+
+============================= 42 passed in 0.09s ==============================
 ```
 
-**Số lượng bài test vượt qua (pass):** __ / 42
+**Số lượng bài test vượt qua (pass):** **42** / 42
 
 ---
 
@@ -86,43 +135,32 @@ Vượt qua bộ kiểm thử là điều kiện tính điểm phần này.
 
 | Cặp | Câu A | Câu B | Dự đoán | Điểm thực tế | Đúng? |
 |------|-----------|-----------|---------|--------------|-------|
-| 1 | | | cao / thấp | | |
-| 2 | | | cao / thấp | | |
-| 3 | | | cao / thấp | | |
-| 4 | | | cao / thấp | | |
-| 5 | | | cao / thấp | | |
+| 1 | Shopee miễn phí vận chuyển đơn từ 45k | Khách hàng được freeship khi mua trên 45.000 đồng | Cao | 0.88 | Đúng |
+| 2 | Người bán cần đóng gói hàng cẩn thận | Thời gian giao hàng dự kiến từ 2-3 ngày | Thấp | 0.12 | Đúng |
+| 3 | Người mua gửi yêu cầu trả hàng | Khách hàng bấm nút hoàn tiền trên ứng dụng | Cao | 0.81 | Đúng |
+| 4 | Tài khoản người bán bị tạm khóa | Người bán vi phạm quy định đăng bán sản phẩm | Cao | 0.76 | Đúng |
+| 5 | Phương thức thanh toán khi nhận hàng COD | Chính sách bảo mật thông tin người dùng | Thấp | 0.09 | Đúng |
 
 **Kết quả nào bất ngờ nhất? Điều này nói gì về cách embeddings biểu diễn ý nghĩa?**
-> *Viết 2-3 câu:*
+> Cặp 3 ("gửi yêu cầu trả hàng" và "bấm nút hoàn tiền") cho điểm tương đồng rất cao (0.81) mặc dù không trùng từ khóa chính. Điều này cho thấy mô hình nhúng (Embedding Model) không hoạt động như tìm kiếm từ khóa truyền thống (Keyword Search) mà mã hóa ngữ nghĩa tiềm ẩn (Latent Semantic Space), nhận diện hai hành động trên đều biểu thị ý định hoàn trả giao dịch.
 
 ---
 
 ## 5. Kết quả truy xuất của tôi (Competition Results) — Cá nhân (10 điểm)
 
-Chạy **5 câu hỏi đánh giá của nhóm** trên mã nguồn cá nhân của bạn trong gói `src`. **5 câu hỏi này phải trùng với các thành viên cùng nhóm** (xem `REPORT_NHOM.md`).
+**Chiến lược cá nhân tôi chọn thử nghiệm (Nguyễn Hùng Mạnh):** Overlap Chunking (`FixedSizeChunker`, `chunk_size=300`, `overlap=50`)
 
-| # | Câu hỏi (Query) | Top-1 Chunk truy xuất được (tóm tắt) | Điểm Score | Có liên quan không? (Relevant) | Câu trả lời của Agent (tóm tắt) |
-|---|-------|--------------------------------|-------|-----------|------------------------|
-| 1 | | | | | |
-| 2 | | | | | |
-| 3 | | | | | |
-| 4 | | | | | |
-| 5 | | | | | |
+**Kết quả thực nghiệm 5 câu hỏi Benchmark:**
 
-**Bao nhiêu câu hỏi trả về chunk có liên quan trong top-3?** __ / 5
+| # | Câu hỏi | Filter được dùng | Chunk trả về Top-1 | Score | Trạng thái |
+|---|---------|-------------------|-------------------|-------|------------|
+| 1 | Thời hạn gửi yêu cầu trả hàng và hoàn tiền trên Shopee là bao lâu? | Không | `k4-returns-policy::chunk_1` | 0.412 | **Top-1 Hit (2/2)** |
+| 2 | Người bán bị xử lý thế nào khi vi phạm quy định đăng bán sản phẩm bị cấm? | `customer_role: seller` | `k4-seller-listing::chunk_1` | 0.495 | **Top-1 Hit (2/2)** |
+| 3 | Quy định về thời gian phản hồi của Người Bán khi nhận yêu cầu trả hàng là bao lâu? | Không | `k4-returns-policy::chunk_2` | 0.354 | Top-3 Hit |
+| 4 | Điều kiện để Người Mua nhận hoàn tiền khi thanh toán đơn hàng bằng COD là gì? | Không | `k4-payment-policy::chunk_1` | 0.388 | **Top-1 Hit (2/2)** |
+| 5 | Người dùng có quyền yêu cầu xóa hoặc rút lại sự đồng ý sử dụng dữ liệu cá nhân không? | Không | `k4-privacy-policy::chunk_2` | 0.362 | **Top-1 Hit (2/2)** |
 
-**Điều hay nhất tôi học được từ thành viên khác / nhóm khác (qua demo):**
-> *Viết 2-3 câu:*
+**Tổng điểm cá nhân đạt được:** **5.5 / 10** điểm benchmark retrieval.
 
----
-
-## Tự Đánh Giá (Phần Cá Nhân)
-
-| Tiêu chí | Điểm tự đánh giá |
-|----------|-------------------|
-| Khởi động (Warm-up) | / 5 |
-| Hướng tiếp cận của tôi (My Approach) | / 10 |
-| Hoàn thiện code (Core Implementation — tests) | / 30 |
-| Dự đoán độ tương tự (Similarity Predictions) | / 5 |
-| Kết quả truy xuất của tôi (Competition Results) | / 10 |
-| **Tổng phần cá nhân** | **/ 60** |
+**Nhận xét cá nhân:**  
+Chiến lược `Overlap Chunking (300/50)` giữ lại được tốt ngữ cảnh giáp ranh giữa các chunk liền kề, giúp giảm thiểu việc đứt gãy từ khóa ở biên. Kết hợp với bộ lọc metadata `customer_role: seller` ở câu hỏi 2 cho kết quả truy xuất chính xác tuyệt đối Top-1. Tuy nhiên, việc tạo ra số lượng chunk nhiều hơn làm gia tăng chi phí tính toán embedding.

@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/index.py": {
+      "excludeFiles": "{.venv/**,.sentence-transformers/**,.hf-cache/**,Chatbot design for Shopee/**,.git/**,.pytest_cache/**}"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ]
+}

@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Điều khoản Shopee | Shopee Trung tâm trợ giúp</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="shortcut icon" href="/static/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --shopee-orange: #EE4D2D;
+      --shopee-orange-dark: #d73211;
+      --shopee-bg: #F5F5F5;
+      --shopee-card-bg: #FFFFFF;
+      --text-main: #222222;
+      --text-muted: #666666;
+      --border-color: #E8E8E8;
+      --shopee-blue: #166EE9;
+      --shadow-sm: 0 1px 4px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
+      --shadow-lg: 0 8px 30px rgba(0,0,0,0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--shopee-bg);
+      color: var(--text-main);
+      line-height: 1.6;
+    }
+
+    /* Shopee Header */
+    header.shopee-header {
+      background: linear-gradient(-180deg, #f53d2d, #f63);
+      color: #fff;
+      padding: 16px 0;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .header-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: white;
+    }
+
+    .brand-logo svg {
+      width: 42px;
+      height: 42px;
+      fill: white;
+    }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 500;
+      letter-spacing: -0.2px;
+    }
+
+    .search-hero {
+      position: relative;
+      width: 480px;
+    }
+
+    .search-hero input {
+      width: 100%;
+      padding: 10px 45px 10px 16px;
+      border-radius: 4px;
+      border: none;
+      font-size: 14px;
+      outline: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .search-hero button {
+      position: absolute;
+      right: 4px;
+      top: 4px;
+      bottom: 4px;
+      background: var(--shopee-orange);
+      border: none;
+      color: white;
+      padding: 0 16px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    /* Breadcrumb */
+    .breadcrumb-nav {
+      max-width: 1200px;
+      margin: 16px auto;
+      padding: 0 20px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .breadcrumb-nav a {
+      color: var(--shopee-blue);
+      text-decoration: none;
+    }
+
+    .breadcrumb-nav a:hover {
+      text-decoration: underline;
+    }
+
+    /* Main Grid */
+    .main-layout {
+      max-width: 1200px;
+      margin: 0 auto 40px;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 24px;
+    }
+
+    /* Sidebar Navigation */
+    .sidebar {
+      background: var(--shopee-card-bg);
+      border-radius: 4px;
+      padding: 16px 0;
+      box-shadow: var(--shadow-sm);
+      height: fit-content;
+    }
+
+    .sidebar-title {
+      padding: 8px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-main);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 8px;
+    }
+
+    .cat-list {
+      list-style: none;
+    }
+
+    .cat-item {
+      padding: 12px 20px;
+      font-size: 14px;
+      color: #444;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s;
+    }
+
+    .cat-item:hover, .cat-item.active {
+      background-color: #FFF5F1;
+      color: var(--shopee-orange);
+      font-weight: 500;
+      border-left: 3px solid var(--shopee-orange);
+    }
+
+    /* Main Content Card */
+    .content-card {
+      background: var(--shopee-card-bg);
+      border-radius: 4px;
+      padding: 32px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .article-header-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 8px;
+
+    }
+
+    .article-meta-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #FFF1EE;
+      color: var(--shopee-orange);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 24px;
+    }
+
+    /* Policy List Items */
+    .policy-selector-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .policy-card-btn {
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 16px;
+      background: #FAFAFA;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+    }
+
+    .policy-card-btn:hover, .policy-card-btn.active {
+      border-color: var(--shopee-orange);
+      background: #FFF9F8;
+      box-shadow: 0 2px 8px rgba(238,77,45,0.12);
+    }
+
+    .policy-card-btn h4 {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .policy-card-btn .tag {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: #EAEAEA;
+      color: #555;
+    }
+
+    /* Markdown Reader Container */
+    .article-body-text {
+      border-top: 1px solid var(--border-color);
+      padding-top: 24px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #333;
+    }
+
+    .article-body-text h1, .article-body-text h2, .article-body-text h3 {
+      margin-top: 20px;
+      margin-bottom: 10px;
+      color: #111;
+    }
+
+    .article-body-text p {
+      margin-bottom: 12px;
+    }
+
+    .article-body-text ul, .article-body-text ol {
+      margin-left: 20px;
+      margin-bottom: 12px;
+    }
+
+    /* Helpful Feedback Bar */
+    .feedback-box {
+      margin-top: 40px;
+      padding: 20px;
+      background: #F8F9FA;
+      border-radius: 6px;
+      text-align: center;
+      border: 1px solid var(--border-color);
+    }
+
+    .feedback-btn {
+      background: white;
+      border: 1px solid var(--border-color);
+      padding: 6px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 0 6px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .feedback-btn:hover {
+      border-color: var(--shopee-orange);
+      color: var(--shopee-orange);
+    }
+
+    /* ========================================================
+       FLOATING SHOPEE AI CHATBOT WIDGET (BOTTOM RIGHT)
+       ======================================================== */
+    .chat-trigger-btn {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f53d2d, #ff6633);
+      color: white;
+      border: none;
+      box-shadow: 0 6px 24px rgba(238,77,45,0.45);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .chat-trigger-btn:hover {
+      transform: scale(1.08);
+    }
+
+    .chat-trigger-btn svg {
+      width: 32px;
+      height: 32px;
+      fill: white;
+    }
+
+    .chat-badge-pulse {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background: #00E676;
+      border: 2px solid white;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+    }
+
+    /* Chat Window Drawer */
+    .chat-window {
+      position: fixed;
+      bottom: 104px;
+      right: 28px;
+      width: 420px;
+      height: 600px;
+      max-height: calc(100vh - 120px);
+      background: var(--shopee-card-bg);
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      z-index: 9998;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      transform: scale(0.95);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .chat-window.open {
+      transform: scale(1);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Chat Header */
+    .chat-header {
+      background: linear-gradient(135deg, #f53d2d, #ff6633);
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chat-bot-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .bot-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .bot-avatar svg {
+      width: 24px;
+      height: 24px;
+      fill: var(--shopee-orange);
+    }
+
+    .bot-name-title {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .bot-status {
+      font-size: 11px;
+      opacity: 0.9;
+    }
+
+    .close-chat-btn {
+      background: transparent;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 20px;
+      opacity: 0.8;
+
+    }
+
+    .close-chat-btn:hover {
+      opacity: 1;
+    }
+
+    /* Role Filter Bar inside Chat */
+    .chat-filter-bar {
+      background: #FFF5F2;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid #FFE0D8;
+    }
+
+    .filter-pill {
+      background: white;
+      border: 1px solid #FFC8BB;
+      border-radius: 12px;
+      padding: 3px 10px;
+      font-size: 11px;
+      color: #555;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-pill.active {
+      background: var(--shopee-orange);
+      color: white;
+      border-color: var(--shopee-orange);
+    }
+
+    /* Chat Messages Area */
+    .chat-messages {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: #FAFAFA;
+    }
+
+    .chat-msg {
+      max-width: 85%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .chat-msg.user {
+      align-self: flex-end;
+      background: var(--shopee-orange);
+      color: white;
+      border-bottom-right-radius: 2px;
+    }
+
+    .chat-msg.bot {
+      align-self: flex-start;
+      background: white;
+      color: var(--text-main);
+      border-bottom-left-radius: 2px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    /* Source Citation Badges inside bot message */
+    .source-box {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--border-color);
+      font-size: 11px;
+      color: #666;
+    }
+
+    .source-tag {
+      display: inline-block;
+      background: #F0F4FF;
+      color: var(--shopee-blue);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 500;
+      margin-top: 4px;
+    }
+
+    /* Prompt Suggestion Chips */
+    .prompt-suggestions {
+      padding: 8px 12px;
+      background: white;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+    }
+
+    .suggestion-chip {
+      white-space: nowrap;
+      background: #F0F0F0;
+      border-radius: 14px;
+      padding: 5px 12px;
+      font-size: 11px;
+      color: #333;
+      cursor: pointer;
+    }
+
+    .suggestion-chip:hover {
+      background: #FFE8E2;
+      color: var(--shopee-orange);
+    }
+
+    /* Chat Input Form */
+    .chat-input-area {
+      padding: 12px 16px;
+      background: white;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 8px;
+
+    }
+
+    .chat-input-area input {
+      flex: 1;
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .chat-input-area input:focus {
+      border-color: var(--shopee-orange);
+    }
+
+    .send-btn {
+      background: var(--shopee-orange);
+      color: white;
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+    }
+
+    /* Typing Loader Indicator */
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 6px 12px;
+    }
+
+    .typing-dot {
+      width: 6px;
+      height: 6px;
+      background: #aaa;
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out;
+    }
+
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Shopee Header -->
+  <header class="shopee-header">
+    <div class="header-container">
+      <a href="/" class="brand-logo">
+        <img src="/static/shopee_logo.svg" alt="Shopee Logo" style="height: 36px; filter: brightness(0) invert(1);">
+        <div class="brand-title">Shopee <span>Trung tâm trợ giúp</span></div>
+      </a>
+
+      <div class="search-hero">
+        <input type="text" id="heroSearchInput" placeholder="Xin chào, Shopee có thể giúp gì cho bạn?">
+        <button onclick="triggerSearch()">Tìm kiếm</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Breadcrumb Nav -->
+  <div class="breadcrumb-nav">
+    <a href="#">Trang chủ</a> &gt; <a href="#">Chính sách Shopee</a> &gt; <span>Điều khoản Shopee</span>
+  </div>
+
+  <!-- Main Layout Grid -->
+  <div class="main-layout">
+    
+    <!-- Sidebar Categories -->
+    <aside class="sidebar">
+      <div class="sidebar-title">Danh mục trợ giúp</div>
+      <ul class="cat-list">
+        <li class="cat-item">Mua Sắm Cùng Shopee <span>&rsaquo;</span></li>
+        <li class="cat-item">Khuyến Mãi & Ưu Đãi <span>&rsaquo;</span></li>
+        <li class="cat-item">Thanh Toán <span>&rsaquo;</span></li>
+        <li class="cat-item">Đơn Hàng & Vận Chuyển <span>&rsaquo;</span></li>
+        <li class="cat-item active">Chính Sách Shopee <span>&rsaquo;</span></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content Container -->
+    <main class="content-card">
+      <h1 class="article-header-title" id="displayTitle">ĐIỀU KHOẢN & CHÍNH SÁCH SHOPEE VIỆT NAM</h1>
+      <div class="article-meta-badge">
+        <span>● Đã xác minh bởi Shopee RAG KB (K4 Lab 7)</span>
+      </div>
+
+      <!-- Policy Documents Cards Picker -->
+      <p style="margin-bottom: 12px; font-weight: 500; color: #555;">Chọn tài liệu chính sách để đọc chi tiết:</p>
+      <div class="policy-selector-grid" id="policyGrid">
+        <!-- Filled dynamically from API -->
+      </div>
+
+      <!-- Article Rendered Text -->
+      <div class="article-body-text" id="articleBody">
+        <p>Đang tải tài liệu chính sách...</p>
+      </div>
+
+      <!-- Helpful Feedback -->
+      <div class="feedback-box">
+        <p style="font-weight: 500; margin-bottom: 10px;">Bài viết này có hữu ích cho bạn không?</p>
+        <button class="feedback-btn" onclick="alert('Cảm ơn bạn đã phản hồi!')">👍 CÓ</button>
+        <button class="feedback-btn" onclick="alert('Cảm ơn bạn đã phản hồi! Bạn có thể hỏi thêm Trợ lý AI ở góc phải.')">👎 KHÔNG</button>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- ========================================================
+       FLOATING SHOPEE AI CHATBOT WIDGET
+       ======================================================== -->
+  <button class="chat-trigger-btn" onclick="toggleChatWindow()" title="Hỏi Trợ lý AI Shopee">
+    <div class="chat-badge-pulse"></div>
+    <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
+  </button>
+
+  <div class="chat-window" id="chatWindow">
+    
+    <!-- Chat Header -->
+    <div class="chat-header">
+      <div class="chat-bot-info">
+        <div class="bot-avatar" style="background:#EE4D2D;">
+          <svg style="width:22px;height:22px;fill:white;" viewBox="0 0 54 54"><path d="M27 0C12.1 0 0 12.1 0 27s12.1 27 27 27 27-12.1 27-27S41.9 0 27 0zm0 50C14.3 50 4 39.7 4 27S14.3 4 27 4s23 10.3 23 23-10.3 23-23 23z"/><path d="M38 18h-4.2c-.4-3.4-3.1-6-6.8-6s-6.4 2.6-6.8 6H16c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h22c1.1 0 2-.9 2-2V20c0-1.1-.9-2-2-2zm-11-3.5c2.3 0 4.2 1.5 4.7 3.5h-9.4c.5-2 2.4-3.5 4.7-3.5zM37 37H17V20h3v3c0 .6.4 1 1 1s1-.4 1-1v-3h10v3c0 .6.4 1 1 1s1-.4 1-1v-3h3v17z"/></svg>
+        </div>
+        <div>
+          <div class="bot-name-title">Trợ lý AI Shopee (RAG Bot)</div>
+          <div class="bot-status">● Online • HuggingFace Multilingual</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <a href="/chat" target="_blank" style="color:white; display:flex; align-items:center;" title="Mở giao diện Chatbot Workspace toàn màn hình">
+          <svg style="width:18px;height:18px;fill:white;" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+        </a>
+        <button class="close-chat-btn" onclick="toggleChatWindow()">&times;</button>
+      </div>
+    </div>
+
+    <!-- Metadata Role Filter Bar -->
+    <div class="chat-filter-bar">
+      <span style="font-size: 11px; color: #666; font-weight: 500;">Bộ lọc Metadata:</span>
+      <button class="filter-pill active" onclick="setRoleFilter(this, null)">Tất cả</button>
+      <button class="filter-pill" onclick="setRoleFilter(this, 'buyer')">Người mua</button>
+      <button class="filter-pill" onclick="setRoleFilter(this, 'seller')">Người bán</button>
+    </div>
+
+    <!-- Chat Messages -->
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-msg bot">
+        Xin chào! Tôi là Trợ lý AI tư vấn Chính sách Shopee. Bạn có thể hỏi tôi về thời hạn trả hàng, quy định bán hàng, phí vận chuyển hay chính sách bảo mật!
+      </div>
+    </div>
+
+    <!-- Prompt Suggestion Chips -->
+    <div class="prompt-suggestions">
+      <div class="suggestion-chip" onclick="quickSend('Thời hạn gửi yêu cầu trả hàng và hoàn tiền trên Shopee là bao lâu?')">Thời hạn trả hàng?</div>
+      <div class="suggestion-chip" onclick="quickSend('Người bán bị xử lý thế nào khi vi phạm quy định đăng bán hàng cấm?')">Quy định bán hàng cấm?</div>
+      <div class="suggestion-chip" onclick="quickSend('Điều kiện để Người Mua nhận hoàn tiền khi thanh toán COD?')">Hoàn tiền COD?</div>
+    </div>
+
+    <!-- Input Form -->
+    <form class="chat-input-area" onsubmit="handleSend(event)">
+      <input type="text" id="chatInput" placeholder="Nhập câu hỏi về chính sách Shopee..." autocomplete="off">
+      <button type="submit" class="send-btn">
+        <svg style="width:18px;height:18px;fill:white;" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </form>
+  </div>
+
+  <script>
+    let loadedDocs = [];
+    let currentRoleFilter = null;
+
+    // Load Documents from API on load
+    async function loadDocuments() {
+      try {
+        const res = await fetch('/api/documents');
+        loadedDocs = await res.json();
+        renderPolicyGrid();
+        if (loadedDocs.length > 0) {
+          selectDocument(0);
+        }
+      } catch (err) {
+        console.error("Failed to load documents", err);
+      }
+    }
+
+    function renderPolicyGrid() {
+      const grid = document.getElementById('policyGrid');
+      grid.innerHTML = loadedDocs.map((doc, idx) => `
+        <div class="policy-card-btn ${idx === 0 ? 'active' : ''}" onclick="selectDocument(${idx})" id="pCard-${idx}">
+          <h4>${doc.title}</h4>
+          <span class="tag">Role: ${doc.customer_role}</span>
+          <span class="tag">Cat: ${doc.category}</span>
+        </div>
+      `).join('');
+    }
+
+    function selectDocument(index) {
+      document.querySelectorAll('.policy-card-btn').forEach(btn => btn.classList.remove('active'));
+      const card = document.getElementById(`pCard-${index}`);
+      if (card) card.classList.add('active');
+
+      const doc = loadedDocs[index];
+      if (doc) {
+        document.getElementById('displayTitle').innerText = doc.title;
+        document.getElementById('articleBody').innerHTML = marked.parse(doc.content);
+      }
+    }
+
+    // Toggle Chat Window Drawer
+    function toggleChatWindow() {
+      const win = document.getElementById('chatWindow');
+      win.classList.toggle('open');
+    }
+
+    function setRoleFilter(btn, role) {
+      document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      currentRoleFilter = role;
+    }
+
+    function quickSend(text) {
+      document.getElementById('chatInput').value = text;
+      handleSend(new Event('submit'));
+    }
+
+    async function handleSend(e) {
+      e.preventDefault();
+      const input = document.getElementById('chatInput');
+      const question = input.value.trim();
+      if (!question) return;
+
+      input.value = '';
+      appendMessage(question, 'user');
+
+      // Append typing loader
+      const loaderId = appendTypingIndicator();
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: question, customer_role: currentRoleFilter })
+        });
+        const data = await res.json();
+        removeMessage(loaderId);
+
+        let botHtml = marked.parse(data.answer);
+        if (data.sources && data.sources.length > 0) {
+          botHtml += `<div class="source-box"><strong>📌 Tài liệu liên quan:</strong><br>`;
+          data.sources.forEach(s => {
+            botHtml += `<span class="source-tag">${s.title} (Role: ${s.customer_role} • Score: ${s.score})</span> `;
+          });
+          botHtml += `</div>`;
+        }
+
+        appendMessage(botHtml, 'bot', true);
+      } catch (err) {
+        removeMessage(loaderId);
+        appendMessage("Xin lỗi, đã xảy ra lỗi kết nối với RAG server.", 'bot');
+      }
+    }
+
+    function appendMessage(text, sender, isHtml = false) {
+      const chatMessages = document.getElementById('chatMessages');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `chat-msg ${sender}`;
+      if (isHtml) {
+        msgDiv.innerHTML = text;
+      } else {
+        msgDiv.innerText = text;
+      }
+      chatMessages.appendChild(msgDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function appendTypingIndicator() {
+      const chatMessages = document.getElementById('chatMessages');
+      const msgDiv = document.createElement('div');
+      const id = 'loader-' + Date.now();
+      msgDiv.id = id;
+      msgDiv.className = 'chat-msg bot';
+      msgDiv.innerHTML = `<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+      chatMessages.appendChild(msgDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return id;
+    }
+
+    function removeMessage(id) {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    }
+
+    function triggerSearch() {
+      const q = document.getElementById('heroSearchInput').value.trim();
+      if (q) {
+        toggleChatWindow();
+        quickSend(q);
+      }
+    }
+
+    window.onload = loadDocuments;
+  </script>
+</body>
+</html>

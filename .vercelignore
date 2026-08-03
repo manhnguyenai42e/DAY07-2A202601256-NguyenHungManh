@@ -1,0 +1,22 @@
+.venv
+.venv/**
+/.venv
+/.venv/**
+.hf-cache
+.hf-cache/**
+/.hf-cache
+/.hf-cache/**
+.sentence-transformers
+.sentence-transformers/**
+/.sentence-transformers
+/.sentence-transformers/**
+.git
+.git/**
+/.git
+/.git/**
+.pytest_cache
+.pytest_cache/**
+Chatbot design for Shopee
+Chatbot design for Shopee/**
+__pycache__
+__pycache__/**
