@@ -32,11 +32,14 @@ class LocalEmbedder:
     """Sentence Transformers-backed local embedder."""
 
     def __init__(self, model_name: str = LOCAL_EMBEDDING_MODEL) -> None:
+        from pathlib import Path
         from sentence_transformers import SentenceTransformer
 
+        local_path = Path("models/paraphrase-multilingual-MiniLM-L12-v2")
+        target = str(local_path) if local_path.exists() else model_name
         self.model_name = model_name
         self._backend_name = model_name
-        self.model = SentenceTransformer(model_name)
+        self.model = SentenceTransformer(target)
 
     def __call__(self, text: str) -> list[float]:
         embedding = self.model.encode(text, normalize_embeddings=True)

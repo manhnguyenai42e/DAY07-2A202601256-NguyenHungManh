@@ -157,10 +157,16 @@ class KnowledgeBaseAgent:
             
         return "general"
 
-    def answer(self, question: str, top_k: int = 3, customer_role: Optional[str] = None) -> Dict:
+    def answer(
+        self,
+        question: str,
+        top_k: int = 3,
+        customer_role: Optional[str] = None,
+        return_dict: bool = False,
+    ) -> Union[str, dict[str, Any]]:
         """
         Retrieves context and generates a direct intent-based answer.
-        Returns a dictionary with 'answer', 'sources', and 'context'.
+        Returns either a string answer or a dictionary with 'answer', 'sources', and 'results'.
         """
         # 1. Classify Intent
         intent = self._classify_intent(question, customer_role)
@@ -180,11 +186,14 @@ class KnowledgeBaseAgent:
             results = self.store.search(question, top_k=top_k)
 
         if not results:
-            return {
-                "answer": "Hiện tại hệ thống chưa tìm thấy thông tin chính sách phù hợp cho câu hỏi này. Bạn có thể liên hệ Tổng đài Shopee 19001221 để được hỗ trợ.",
-                "sources": [],
-                "results": []
-            }
+            fallback_msg = "Hiện tại hệ thống chưa tìm thấy thông tin chính sách phù hợp cho câu hỏi này. Bạn có thể liên hệ Tổng đài Shopee 19001221 để được hỗ trợ."
+            if return_dict:
+                return {
+                    "answer": fallback_msg,
+                    "sources": [],
+                    "results": []
+                }
+            return fallback_msg
 
         # 3. Build context blocks and sources metadata
         context_blocks = []
@@ -238,8 +247,10 @@ class KnowledgeBaseAgent:
         else:
             answer = llm_response
 
-        return {
-            "answer": answer,
-            "sources": sources,
-            "results": results
-        }
+        if return_dict:
+            return {
+                "answer": answer,
+                "sources": sources,
+                "results": results
+            }
+        return answer

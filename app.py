@@ -92,7 +92,7 @@ def chat():
         return jsonify({"error": "Question is required."}), 400
 
     agent = get_agent()
-    response = agent.answer(question=question, top_k=3, customer_role=role_filter)
+    response = agent.answer(question=question, top_k=3, customer_role=role_filter, return_dict=True)
 
     return jsonify({
         "question": question,

@@ -19,5 +19,6 @@ __pycache__/
 .hf-cache/
 .sentence-transformers/
 Chatbot design for Shopee/
+models/
 src_w_solution/
 .vercel
