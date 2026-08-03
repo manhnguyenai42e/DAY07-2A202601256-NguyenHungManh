@@ -798,59 +798,59 @@
       input.value = '';
       appendMessage(question, 'user');
 
-      // Append typing loader
       const loaderId = appendTypingIndicator();
 
       try {
-        const res = await fetch('/api/chat', {
+        const res = await fetch('/api/chat/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ question: question, customer_role: currentRoleFilter })
         });
-        const data = await res.json();
+
+        if (!res.ok) throw new Error("Stream error");
+
         removeMessage(loaderId);
-
-        let sourcesHtml = "";
-        if (data.sources && data.sources.length > 0) {
-          sourcesHtml += `<div class="source-box"><strong>📌 Tài liệu liên quan:</strong><br>`;
-          data.sources.forEach(s => {
-            sourcesHtml += `<span class="source-tag">${s.title} (Role: ${s.customer_role} • Score: ${s.score})</span> `;
-          });
-          sourcesHtml += `</div>`;
-        }
-
         const botMsgDiv = appendMessage("", 'bot', true);
-        typeBotResponse(botMsgDiv, data.answer, sourcesHtml);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let rawMarkdown = "";
+        let sourcesHtml = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n");
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const event = JSON.parse(line.slice(6));
+                if (event.type === "sources" && event.sources && event.sources.length > 0) {
+                  sourcesHtml = `<div class="source-box"><strong>📌 Tài liệu liên quan:</strong><br>`;
+                  event.sources.forEach(s => {
+                    sourcesHtml += `<span class="source-tag">${s.title} (Role: ${s.customer_role} • Score: ${s.score})</span> `;
+                  });
+                  sourcesHtml += `</div>`;
+                } else if (event.type === "content" && event.delta) {
+                  rawMarkdown += event.delta;
+                  const clean = rawMarkdown.replace(/^[ \t]*[•·][ \t]*/gm, '- ');
+                  botMsgDiv.innerHTML = marked.parse(clean) + sourcesHtml;
+                  const scrollArea = document.getElementById('chatMessages');
+                  if (scrollArea) scrollArea.scrollTop = scrollArea.scrollHeight;
+                }
+              } catch (err) {
+                // Ignore parse errors
+              }
+            }
+          }
+        }
       } catch (err) {
         removeMessage(loaderId);
         appendMessage("Xin lỗi, đã xảy ra lỗi kết nối với RAG server.", 'bot');
       }
-    }
-
-    function typeBotResponse(containerElement, rawMarkdown, sourcesHtml) {
-      const cleanMarkdown = (rawMarkdown || "").replace(/^[ \t]*[•·][ \t]*/gm, '- ');
-      const words = cleanMarkdown.split(/(\s+)/);
-      let index = 0;
-      let currentText = "";
-
-      const timer = setInterval(() => {
-        if (index >= words.length) {
-          clearInterval(timer);
-          containerElement.innerHTML = marked.parse(cleanMarkdown) + (sourcesHtml || '');
-          const scrollArea = document.getElementById('chatMessages');
-          if (scrollArea) scrollArea.scrollTop = scrollArea.scrollHeight;
-          return;
-        }
-
-        currentText += words[index];
-        index++;
-
-        const currentClean = currentText.replace(/^[ \t]*[•·][ \t]*/gm, '- ');
-        containerElement.innerHTML = marked.parse(currentClean);
-
-        const scrollArea = document.getElementById('chatMessages');
-        if (scrollArea) scrollArea.scrollTop = scrollArea.scrollHeight;
-      }, 20);
     }
 
     function appendMessage(text, sender, isHtml = false) {

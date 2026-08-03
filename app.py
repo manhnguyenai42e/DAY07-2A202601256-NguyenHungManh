@@ -3,7 +3,8 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from flask import Flask, jsonify, render_template, request
+import json
+from flask import Flask, Response, jsonify, render_template, request, stream_with_context
 
 # Ensure root directory is on python path
 ROOT_DIR = Path(__file__).parent.resolve()
@@ -107,6 +108,23 @@ def chat():
         "answer": response["answer"],
         "sources": response["sources"],
     })
+
+@app.route("/api/chat/stream", methods=["POST"])
+def chat_stream():
+    data = request.json or {}
+    question = (data.get("question") or "").strip()
+    role_filter = data.get("customer_role")
+
+    if not question:
+        return jsonify({"error": "Question is required."}), 400
+
+    agent = get_agent()
+
+    def generate():
+        for event in agent.answer_stream(question=question, top_k=3, customer_role=role_filter):
+            yield f"data: {json.dumps(event)}\n\n"
+
+    return Response(stream_with_context(generate()), mimetype="text/event-stream")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))

@@ -117,11 +117,118 @@ def create_llm_fn(intent: str = "general") -> Callable[[str], str]:
         except Exception as err:
             print(f"Warning: OpenAI API init failed ({err}), falling back to Offline Synthesizer...")
 
-    # 4. Offline RAG Synthesizer Fallback
-    def offline_llm(prompt: str) -> str:
-        return prompt
+def create_stream_llm_fn(intent: str = "general") -> Callable[[str], Generator[str, None, None]]:
+    """Creates a streaming LLM generator function with fallback chain."""
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    deepseek_key = os.getenv("DEEPSEEK_API_KEY")
+    openai_key = os.getenv("OPENAI_API_KEY")
 
-    return offline_llm
+    if intent == "seller":
+        system_instruction = (
+            "Bạn là Chuyên viên Pháp chế và Quy định Bán hàng Shopee Việt Nam. "
+            "Giải thích chính xác các quy định đăng bán, hàng cấm/hạn chế, vi phạm và mức xử phạt cho Người bán. "
+            "Trực diện, súc tích, đi thẳng vào câu trả lời. TUYỆT ĐỐI KHÔNG CHÀO HỎI, KHÔNG XƯNG LỜI MỞ ĐẦU."
+        )
+    elif intent == "buyer":
+        system_instruction = (
+            "Bạn là Chuyên viên Quyền lợi Người mua Shopee Việt Nam. "
+            "Giải thích chính xác thời hạn trả hàng hoàn tiền, hình thức thanh toán, bảo mật thông tin. "
+            "Trực diện, súc tích, đi thẳng vào câu trả lời. TUYỆT ĐỐI KHÔNG CHÀO HỎI, KHÔNG XƯNG LỜI MỞ ĐẦU."
+        )
+    else:
+        system_instruction = (
+            "Bạn là Chuyên viên Hỗ trợ Điều khoản và Chính sách Shopee Việt Nam. "
+            "Cung cấp thông tin chính xác, ngắn gọn, cấu trúc rõ ràng. "
+            "Trực diện, súc tích, đi thẳng vào câu trả lời. TUYỆT ĐỐI KHÔNG CHÀO HỎI, KHÔNG XƯNG LỜI MỞ ĐẦU."
+        )
+
+    # 1. Try Gemini streaming
+    if gemini_key:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=gemini_key)
+            preferred_model = os.getenv("GEMINI_MODEL", "gemini-3.1-flash")
+            candidate_models = [preferred_model, "gemini-2.5-flash", "gemini-2.0-flash"]
+            
+            for m_name in candidate_models:
+                try:
+                    model = genai.GenerativeModel(m_name, system_instruction=system_instruction)
+                    def gemini_stream_llm(prompt: str):
+                        res = model.generate_content(prompt, stream=True)
+                        for chunk in res:
+                            if chunk and chunk.text:
+                                yield chunk.text
+                    return gemini_stream_llm
+                except Exception:
+                    continue
+        except Exception as err:
+            print(f"Warning: Gemini API stream init failed ({err}), trying DeepSeek...")
+
+    # 2. Try DeepSeek streaming
+    if deepseek_key:
+        try:
+            from openai import OpenAI
+            ds_client = OpenAI(api_key=deepseek_key, base_url="https://api.deepseek.com")
+            preferred_ds = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
+            ds_candidates = [preferred_ds, "deepseek-chat"]
+            for ds_m in ds_candidates:
+                try:
+                    def deepseek_stream_llm(prompt: str):
+                        res = ds_client.chat.completions.create(
+                            model=ds_m,
+                            messages=[
+                                {"role": "system", "content": system_instruction},
+                                {"role": "user", "content": prompt}
+                            ],
+                            temperature=0.3,
+                            stream=True
+                        )
+                        for chunk in res:
+                            if chunk.choices and chunk.choices[0].delta.content:
+                                yield chunk.choices[0].delta.content
+                    return deepseek_stream_llm
+                except Exception:
+                    continue
+        except Exception as err:
+            print(f"Warning: DeepSeek API stream init failed ({err})...")
+
+    # 3. Try OpenAI streaming
+    if openai_key and not openai_key.startswith("sk-proj-placeholder"):
+        try:
+            from openai import OpenAI
+            oai_client = OpenAI(api_key=openai_key)
+            preferred_oai = os.getenv("OPENAI_MODEL", "o4-mini")
+            oai_candidates = [preferred_oai, "gpt-4o-mini"]
+            for oai_m in oai_candidates:
+                try:
+                    def openai_stream_llm(prompt: str):
+                        res = oai_client.chat.completions.create(
+                            model=oai_m,
+                            messages=[
+                                {"role": "system", "content": system_instruction},
+                                {"role": "user", "content": prompt}
+                            ],
+                            temperature=0.3,
+                            stream=True
+                        )
+                        for chunk in res:
+                            if chunk.choices and chunk.choices[0].delta.content:
+                                yield chunk.choices[0].delta.content
+                    return openai_stream_llm
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+    # 4. Offline Fallback Stream
+    def offline_stream_llm(prompt: str):
+        fallback_fn = create_llm_fn(intent=intent)
+        full_text = fallback_fn(prompt)
+        words = full_text.split(" ")
+        for w in words:
+            yield w + " "
+
+    return offline_stream_llm
 
 
 class KnowledgeBaseAgent:
@@ -254,3 +361,72 @@ class KnowledgeBaseAgent:
                 "results": results
             }
         return answer
+
+    def answer_stream(
+        self,
+        question: str,
+        top_k: int = 3,
+        customer_role: Optional[str] = None,
+    ) -> Generator[dict[str, Any], None, None]:
+        """Streams context retrieval and token generation via SSE events."""
+        intent = self._classify_intent(question, customer_role)
+
+        if customer_role and customer_role in ("buyer", "seller"):
+            results = self.store.search_with_filter(
+                question,
+                metadata_filter={"customer_role": customer_role},
+                top_k=top_k
+            )
+        else:
+            results = self.store.search(question, top_k=top_k)
+
+        if not results:
+            yield {"type": "sources", "sources": []}
+            yield {
+                "type": "content",
+                "delta": "Hiện tại hệ thống chưa tìm thấy thông tin chính sách phù hợp cho câu hỏi này. Bạn có thể liên hệ Tổng đài Shopee 19001221 để được hỗ trợ."
+            }
+            yield {"type": "done"}
+            return
+
+        context_blocks = []
+        sources = []
+        for idx, item in enumerate(results, start=1):
+            meta = item.get("metadata", {})
+            doc_id = meta.get("doc_id", item.get("id", ""))
+            title = meta.get("title", doc_id)
+            score = item.get("score", 0.0)
+            content = item.get("content", "")
+            
+            context_blocks.append(f"Tài liệu {idx} [{title}]:\n{content}")
+            sources.append({
+                "index": idx,
+                "doc_id": doc_id,
+                "title": title,
+                "score": round(score, 4),
+                "snippet": content[:300] + ("..." if len(content) > 300 else ""),
+                "customer_role": meta.get("customer_role", "both"),
+                "source_url": meta.get("source_url", ""),
+            })
+
+        # Yield sources metadata IMMEDIATELY (0ms delay for UI!)
+        yield {"type": "sources", "sources": sources}
+
+        context_str = "\n\n".join(context_blocks)
+        prompt = (
+            f"=== THÔNG TIN CHÍNH SÁCH SHOPEE TRÍCH XUẤT ===\n{context_str}\n\n"
+            f"=== CÂU HỎI ===\n{question}\n\n"
+            f"=== QUY TẮC TRẢ LỜI CỐT LÕI ===\n"
+            f"1. TUYỆT ĐỐI KHÔNG CHÀO HỎI, KHÔNG LỜI MỞ ĐẦU (KHÔNG dùng 'Dạ chào bạn', 'Xin chào', 'Cảm ơn bạn').\n"
+            f"2. Đi thẳng trực tiếp vào câu trả lời, trả lời đúng trọng tâm vấn đề.\n"
+            f"3. Nêu rõ các quy định, con số cụ thể (mốc thời gian 15 ngày, 24h, % phí, quy định xử phạt).\n"
+            f"4. Trình bày dạng danh sách gạch đầu dòng Markdown chuẩn (dùng dấu gạch ngang '-' ở đầu mỗi dòng), in đậm từ khóa chính.\n"
+            f"5. Không xưng 'Tôi là AI', không máy móc."
+        )
+
+        stream_runner = create_stream_llm_fn(intent=intent)
+        for chunk in stream_runner(prompt):
+            if chunk:
+                yield {"type": "content", "delta": chunk}
+
+        yield {"type": "done"}

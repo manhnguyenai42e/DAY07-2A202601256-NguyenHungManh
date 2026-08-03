@@ -706,56 +706,57 @@
       const loaderId = appendLoader();
 
       try {
-        const res = await fetch('/api/chat', {
+        const res = await fetch('/api/chat/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ question: question })
         });
-        const data = await res.json();
+
+        if (!res.ok) throw new Error("Stream error");
+
         removeLoader(loaderId);
-
-        let sourcesHtml = "";
-        if (data.sources && data.sources.length > 0) {
-          sourcesHtml += `<div class="source-box"><strong>📌 Tài liệu liên quan:</strong><br>`;
-          data.sources.forEach(s => {
-            sourcesHtml += `<span class="source-tag">${s.title} (Score: ${s.score})</span> `;
-          });
-          sourcesHtml += `</div>`;
-        }
-
         const bubbleEl = appendMsg("", 'bot', true);
-        typeBotResponse(bubbleEl, data.answer, sourcesHtml);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let rawMarkdown = "";
+        let sourcesHtml = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n");
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const event = JSON.parse(line.slice(6));
+                if (event.type === "sources" && event.sources && event.sources.length > 0) {
+                  sourcesHtml = `<div class="source-box"><strong>📌 Tài liệu liên quan:</strong><br>`;
+                  event.sources.forEach(s => {
+                    sourcesHtml += `<span class="source-tag">${s.title} (Score: ${s.score})</span> `;
+                  });
+                  sourcesHtml += `</div>`;
+                } else if (event.type === "content" && event.delta) {
+                  rawMarkdown += event.delta;
+                  const clean = rawMarkdown.replace(/^[ \t]*[•·][ \t]*/gm, '- ');
+                  bubbleEl.innerHTML = marked.parse(clean) + sourcesHtml;
+                  const contentArea = document.getElementById('contentArea');
+                  if (contentArea) contentArea.scrollTop = contentArea.scrollHeight;
+                }
+              } catch (err) {
+                // Ignore parse errors
+              }
+            }
+          }
+        }
 
       } catch (err) {
         removeLoader(loaderId);
         appendMsg("Xin lỗi, đã xảy ra lỗi kết nối với RAG server.", 'bot');
       }
-    }
-
-    function typeBotResponse(containerElement, rawMarkdown, sourcesHtml) {
-      const cleanMarkdown = (rawMarkdown || "").replace(/^[ \t]*[•·][ \t]*/gm, '- ');
-      const words = cleanMarkdown.split(/(\s+)/);
-      let index = 0;
-      let currentText = "";
-
-      const timer = setInterval(() => {
-        if (index >= words.length) {
-          clearInterval(timer);
-          containerElement.innerHTML = marked.parse(cleanMarkdown) + (sourcesHtml || '');
-          const contentArea = document.getElementById('contentArea');
-          if (contentArea) contentArea.scrollTop = contentArea.scrollHeight;
-          return;
-        }
-
-        currentText += words[index];
-        index++;
-
-        const currentClean = currentText.replace(/^[ \t]*[•·][ \t]*/gm, '- ');
-        containerElement.innerHTML = marked.parse(currentClean);
-
-        const contentArea = document.getElementById('contentArea');
-        if (contentArea) contentArea.scrollTop = contentArea.scrollHeight;
-      }, 20);
     }
 
     function appendMsg(content, sender, isHtml = false) {
